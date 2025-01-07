@@ -12,16 +12,25 @@ password="$2"
 hostname="$3"
 ipAddr="$4"
 
+get_ipv6_address() {
+    local ip6Addr="" # 在函数内部使用 local 声明变量
+    ip -6 addr show ovs_eth1 | awk '/inet6.*scope global/ {print $2}' | cut -d/ -f1 | while read ip; do
+        local prefix=$(echo "$ip" | cut -d: -f1) # local 变量
+        local prefix_int=$((16#$prefix))
+        if (( prefix_int >= 0x2000 && prefix_int <= 0x3fff )); then
+            echo "$ip" # 输出到标准输出
+            return 0
+        fi
+    done
+    return 1
+}
+
+
+
 #Fetch and filter IPv6, if Synology won't provide it
 if [[ $ipv6 = "true" ]]; then
- 	ip -6 addr show ovs_eth1 | awk '/inet6.*scope global/ {print $2}' | cut -d/ -f1 | while read ip; do
-		prefix=$(echo "$ip" | cut -d: -f1)
-		prefix_int=$((16#$prefix)) # 将十六进制前缀转换为十进制整数
-		if (( prefix_int >= 0x2000 && prefix_int <= 0x3fff )); then
-			echo "$ip"
-   			ip6Addr=$ip
-		fi
-	done
+
+	ip6Addr=$(get_ipv6_address)
 	recType6="AAAA"
 
 	if [[ -z "$ip6Addr" ]]; then
