@@ -14,12 +14,14 @@ ipAddr="$4"
 
 #Fetch and filter IPv6, if Synology won't provide it
 if [[ $ipv6 = "true" ]]; then
-	ip6Addr=$(ip -6 addr show ovs_eth1 | grep "scope global" | grep -oE '([23][0-9a-fA-F]{3}:[0-9a-fA-F]{1,4}:){1,6}[0-9a-fA-F]{1,4}' | head -n 1)
-	if [[ -z "$ip6Addr" ]]; then
-	  echo "未找到全球单播 IPv6 地址"
-	else
-	  echo "$ip6Addr"
-	fi
+ 	ip -6 addr show ovs_eth1 | awk '/inet6.*scope global/ {print $2}' | cut -d/ -f1 | while read ip; do
+		prefix=$(echo "$ip" | cut -d: -f1)
+		prefix_int=$((16#$prefix)) # 将十六进制前缀转换为十进制整数
+		if (( prefix_int >= 0x2000 && prefix_int <= 0x3fff )); then
+			echo "$ip"
+   			ip6Addr=$ip
+		fi
+	done
 	recType6="AAAA"
 
 	if [[ -z "$ip6Addr" ]]; then
